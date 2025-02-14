@@ -1,4 +1,4 @@
-package ca.yorku.eecs.mack.demoscale;
+package ca.yorku.eecs.mack.demoscale56809;
 
 import android.content.Context;
 import android.graphics.Canvas;

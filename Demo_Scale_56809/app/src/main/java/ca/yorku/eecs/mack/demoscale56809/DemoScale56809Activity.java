@@ -1,4 +1,4 @@
-package ca.yorku.eecs.mack.demoscale;
+package ca.yorku.eecs.mack.demoscale56809;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -142,7 +142,7 @@ import android.view.Window;
  * @author (c) Scott MacKenzie, 2011-2018
  */
 
-public class DemoScaleActivity extends Activity
+public class DemoScale56809Activity extends Activity
 {
     PaintPanel imagePanel; // the panel in which to paint the image
     StatusPanel statusPanel; // a status panel the display the image coordinates, size, and scale

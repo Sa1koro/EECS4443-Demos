@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="ca.yorku.eecs.mack.demoscale"
+    package="ca.yorku.eecs.mack.demoscale56809"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -10,7 +10,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name" >
         <activity
-            android:name="ca.yorku.eecs.mack.demoscale.DemoScaleActivity"
+            android:name="ca.yorku.eecs.mack.demoscale56809.DemoScale56809Activity"
             android:configChanges="orientation"
             android:exported="true">
             <intent-filter>
