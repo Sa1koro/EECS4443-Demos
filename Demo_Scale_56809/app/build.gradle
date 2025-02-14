@@ -4,7 +4,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "ca.yorku.eecs.mack.demoscale"
+        applicationId "ca.yorku.eecs.mack.demoscale56809"
         minSdkVersion 13
         targetSdk 33
     }
@@ -15,5 +15,5 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
-    namespace 'ca.yorku.eecs.mack.demoscale'
+    namespace 'ca.yorku.eecs.mack.demoscale56809'
 }
