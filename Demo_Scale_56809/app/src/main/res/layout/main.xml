@@ -41,6 +41,20 @@
             android:layout_weight="1"
             android:onClick="clickReset"
             android:text="@string/resetbuttontext" />
+
+        <Button
+            android:id="@+id/captureImageButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Capture Image"
+            android:onClick="captureImage"/>
+
+        <Button
+            android:id="@+id/toggleFilterButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="clickToggleFilter"
+            android:text="Toggle Filter"/>
     </LinearLayout>
 
 </LinearLayout>

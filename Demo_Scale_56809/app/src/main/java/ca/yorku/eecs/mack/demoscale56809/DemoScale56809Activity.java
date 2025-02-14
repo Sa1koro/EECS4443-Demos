@@ -1,6 +1,8 @@
 package ca.yorku.eecs.mack.demoscale56809;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
@@ -147,6 +149,9 @@ public class DemoScale56809Activity extends Activity
     PaintPanel imagePanel; // the panel in which to paint the image
     StatusPanel statusPanel; // a status panel the display the image coordinates, size, and scale
 
+    // Use any request code
+    private static final int REQUEST_IMAGE_CAPTURE = 1234;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -170,5 +175,32 @@ public class DemoScale56809Activity extends Activity
         imagePanel.yPosition = 10;
         imagePanel.scaleFactor = 1f;
         imagePanel.invalidate();
+    }
+
+    public void clickToggleFilter(View view)
+    {
+        // [Student's change] Toggle grayscale filter for our new feature
+        imagePanel.toggleFilter();
+    }
+
+    public void captureImage(View view)
+    {
+        // [Student's change] Launch camera to capture a new image
+        Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+        // ...possibly configure the intent...
+        startActivityForResult(intent, REQUEST_IMAGE_CAPTURE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        // [Student's change] Handle the captured image
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK)
+        {
+            Bundle extras = data.getExtras();
+            Bitmap newBitmap = (Bitmap) extras.get("data");
+            imagePanel.setCapturedImage(newBitmap);  // Load new image at run-time
+        }
+        // ...existing code...
     }
 }

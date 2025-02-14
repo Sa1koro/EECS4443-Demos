@@ -1,9 +1,14 @@
 package ca.yorku.eecs.mack.demoscale56809;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Paint;
 import android.os.CountDownTimer;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
@@ -43,6 +48,8 @@ public class PaintPanel extends View
     private float xRatio, yRatio;
     private float flingVelocity;
     private float flingAngle;
+    private boolean isZoomedIn = false; // [Student's change for double-tap toggle]
+    private boolean isGray = false; // [Student's change for filter toggle]
 
     // Provide three constructors to correspond to each of the three in View
     public PaintPanel(Context context, AttributeSet attrs, int defStyle)
@@ -66,10 +73,10 @@ public class PaintPanel extends View
     private void initialize(Context context)
     {
         this.setBackgroundColor(0xffffafb0); // AARRGGBB: opacity, red, green, blue
-        targetImage = context.getResources().getDrawable(R.drawable.varihall);
-        imageIntrinsicWidth = targetImage.getIntrinsicWidth();
-        imageIntrinsicHeight = targetImage.getIntrinsicHeight();
-        targetImage.setBounds(0, 0, imageIntrinsicWidth, imageIntrinsicHeight);
+        // [Student's change: remove default varihall image]
+        // targetImage = context.getResources().getDrawable(R.drawable.varihall);
+        imageIntrinsicWidth = 0;
+        imageIntrinsicHeight = 0;
         xPosition = 10;
         yPosition = 10;
         scaleFactor = 1f;
@@ -95,6 +102,30 @@ public class PaintPanel extends View
         pixelDensity = context.getResources().getDisplayMetrics().density;
     }
 
+    // [Student's change] Method to set a new bitmap from the camera
+    public void setCapturedImage(Bitmap capturedImage) {
+        targetImage = new BitmapDrawable(getResources(), capturedImage);
+        imageIntrinsicWidth = targetImage.getIntrinsicWidth();
+        imageIntrinsicHeight = targetImage.getIntrinsicHeight();
+        invalidate();
+    }
+
+    // [Student's change] Toggle grayscale color filter
+    public void toggleFilter() {
+        if (!isGray) {
+            ColorMatrix matrix = new ColorMatrix();
+            matrix.setSaturation(0);
+            Paint paint = new Paint();
+            paint.setColorFilter(new ColorMatrixColorFilter(matrix));
+            setLayerType(LAYER_TYPE_HARDWARE, paint);
+            isGray = true;
+        } else {
+            setLayerType(LAYER_TYPE_HARDWARE, null);
+            isGray = false;
+        }
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas)
     {
@@ -102,7 +133,9 @@ public class PaintPanel extends View
         canvas.save();
         canvas.translate(xPosition, yPosition);
         canvas.scale(scaleFactor, scaleFactor);
-        targetImage.draw(canvas);
+        if (targetImage != null) {
+            targetImage.draw(canvas);
+        }
         canvas.restore();
 
         // update the status panel
@@ -356,6 +389,41 @@ public class PaintPanel extends View
             flingVelocity = (float)Math.sqrt(velocityX * velocityX + velocityY * velocityY);
             flingAngle = (float)Math.atan2(velocityY, velocityX);
             flingTimer.start();
+            return true;
+        }
+
+        // [Student's change] Implement onDoubleTap to toggle scale factor by ×3 or ÷3
+        @Override
+        public boolean onDoubleTap(MotionEvent e)
+        {
+            float x = e.getX();
+            float y = e.getY();
+            // Check if double-tap is on the image
+            float left = xPosition;
+            float top = yPosition;
+            float right = left + imageIntrinsicWidth * scaleFactor;
+            float bottom = top + imageIntrinsicHeight * scaleFactor;
+            if (new RectF(left, top, right, bottom).contains(x, y))
+            {
+                float xOffset = x - xPosition;
+                float yOffset = y - yPosition;
+                float tmpXRatio = xOffset / (imageIntrinsicWidth * scaleFactor);
+                float tmpYRatio = yOffset / (imageIntrinsicHeight * scaleFactor);
+
+                // Toggle scale
+                if (!isZoomedIn) {
+                    scaleFactor *= 3f;
+                    isZoomedIn = true;
+                } else {
+                    scaleFactor /= 3f;
+                    isZoomedIn = false;
+                }
+
+                // Re-center
+                xPosition = x - tmpXRatio * imageIntrinsicWidth * scaleFactor;
+                yPosition = y - tmpYRatio * imageIntrinsicHeight * scaleFactor;
+                invalidate();
+            }
             return true;
         }
     }
