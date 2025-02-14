@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--   Color for the background of app activity. !-->
+    <color name="activityBackground">#FF123456</color>
+</resources>

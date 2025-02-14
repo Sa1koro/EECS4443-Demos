@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--modify land layout-->
+<!-- Unique Feature: Overhaul of UI for better UX -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:background="#ff123456"
+    android:gravity="center_vertical"
+    android:orientation="vertical" >
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="5dp"
+        android:text="@string/instructions"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TableLayout
+        android:id="@+id/tableLayout1"
+        android:layout_width="639dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity=""
+        android:gravity="center"
+        android:paddingLeft="5dp"
+        android:paddingTop="5dp"
+        android:paddingRight="5dp"
+        android:paddingBottom="5dp">
+
+        <TableRow
+            android:id="@+id/tableRow1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="buttonClick"
+                android:text="@string/buttonLabel"
+                android:textAppearance="?android:attr/textAppearanceSmall" />
+            <CheckBox
+                android:id="@+id/checkbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="buttonClick"
+                android:text="@string/checkboxLabel"
+                android:textAppearance="?android:attr/textAppearanceSmall" />
+            <RadioGroup
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/radiobutton1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:onClick="buttonClick"
+                    android:text="@string/redButtonLabel"
+                    android:textAppearance="?android:attr/textAppearanceSmall" />
+
+                <RadioButton
+                    android:id="@+id/radiobutton2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:onClick="buttonClick"
+                    android:text="@string/greenButtonLabel"
+                    android:textAppearance="?android:attr/textAppearanceSmall" />
+
+                <RadioButton
+                    android:id="@+id/radiobutton3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:onClick="buttonClick"
+                    android:text="@string/blueButtonLabel"
+                    android:textAppearance="?android:attr/textAppearanceSmall" />
+            </RadioGroup>
+
+            <ToggleButton
+                android:id="@+id/togglebutton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="buttonClick"
+                android:text="@string/toggleButtonLabel"
+                android:textAppearance="?android:attr/textAppearanceSmall" />
+
+            <ImageButton
+                android:id="@+id/backspacebutton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:contentDescription="@string/backspaceButtonText"
+                android:onClick="buttonClick"
+                android:padding="10dp"
+                android:src="@drawable/bs_normal" />
+
+        </TableRow>
+
+        <TableRow
+            android:id="@+id/tableRow2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/buttonclickstatus"
+                android:layout_width="50dp"
+                android:layout_weight="1"
+                android:gravity="bottom"
+                android:padding="5dp" />
+
+            <TextView
+                android:id="@+id/checkboxclickstatus"
+                android:layout_width="100dp"
+                android:layout_weight="1"
+                android:gravity="bottom"
+                android:padding="5dp" />
+
+            <TextView
+                android:id="@+id/radiobuttonclickstatus"
+                android:layout_width="50dp"
+                android:layout_weight="1"
+                android:gravity="bottom"
+                android:padding="5dp" />
+
+            <TextView
+                android:id="@+id/togglebuttonclickstatus"
+                android:layout_width="50dp"
+                android:layout_weight="1"
+                android:gravity="bottom"
+                android:padding="5dp" />
+
+            <TextView
+                android:id="@+id/backspacebuttonclickstatus"
+                android:layout_width="50dp"
+                android:layout_weight="1"
+                android:gravity="bottom"
+                android:padding="5dp"
+                android:textAppearance="?android:attr/textAppearanceSmall" />
+        </TableRow>
+    </TableLayout>
+
+</LinearLayout>
