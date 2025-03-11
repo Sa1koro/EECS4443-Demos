@@ -60,6 +60,8 @@ public class DemoTiltBall56809Activity extends Activity implements SensorEventLi
     // parameters from the Setup dialog
     String orderOfControl, pathType, pathWidth;
     int gain;
+    // pass numbersOfLaps from MainActivity
+    int numbersOfLaps;
 
     int defaultOrientation;
     ScreenRefreshTimer refreshScreen;
@@ -81,6 +83,8 @@ public class DemoTiltBall56809Activity extends Activity implements SensorEventLi
         gain = b.getInt("gain");
         pathType = b.getString("pathType");
         pathWidth = b.getString("pathWidth");
+        //get numbersOfLaps selected by user from setup dialog
+        numbersOfLaps = b.getInt("numberOfLaps");
 
         // set alpha for low-pass filter (based on sampling rate and order of control)
         if (orderOfControl.equals("Velocity")) // velocity control
@@ -100,7 +104,7 @@ public class DemoTiltBall56809Activity extends Activity implements SensorEventLi
 
         // configure rolling ball panel, as per setup parameters
         rb = (RollingBallPanel)findViewById(R.id.rollingballpanel);
-        rb.configure(pathType, pathWidth, gain, orderOfControl);
+        rb.configure(pathType, pathWidth, gain, orderOfControl, numbersOfLaps);
 
         // get sensors
         sm = (SensorManager)getSystemService(SENSOR_SERVICE);

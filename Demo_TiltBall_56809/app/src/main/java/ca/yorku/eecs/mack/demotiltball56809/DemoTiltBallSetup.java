@@ -24,7 +24,7 @@ public class DemoTiltBallSetup extends Activity
 	Spinner spinOrderOfControl, spinGain, spinPathMode, spinPathWidth;
 
 	// Add laps option
-	final static String[] NUMBER_OF_LAPS = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+	final static Integer[] NUMBER_OF_LAPS = new Integer[]{1, 2, 3, 4, 5, 6, 7, 8, 9};
 	Spinner spinNumberOfLaps;
 
 	// called when the activity is first created
@@ -58,7 +58,7 @@ public class DemoTiltBallSetup extends Activity
 
 		// Initialize the laps of spinner
 		spinNumberOfLaps = (Spinner) findViewById(R.id.paramNumberOfLaps);
-		ArrayAdapter<CharSequence> adapter5 = new ArrayAdapter<>(this, R.layout.spinnerstyle, NUMBER_OF_LAPS);
+		ArrayAdapter<Integer> adapter5 = new ArrayAdapter<Integer>(this, R.layout.spinnerstyle, NUMBER_OF_LAPS);
 		spinNumberOfLaps.setAdapter(adapter5);
 		spinNumberOfLaps.setSelection(0);
 	}
@@ -87,8 +87,8 @@ public class DemoTiltBallSetup extends Activity
 		b.putString("pathWidth", pathWidth);
 
 		// pass number of laps to click
-		String numberOfLaps = NUMBER_OF_LAPS[spinNumberOfLaps.getSelectedItemPosition()];
-		b.putString("numberOfLaps", numberOfLaps);
+		int numberOfLaps = NUMBER_OF_LAPS[spinNumberOfLaps.getSelectedItemPosition()];
+		b.putInt("numberOfLaps", numberOfLaps);
 
 		// start experiment activity
 		Intent i = new Intent(getApplicationContext(), DemoTiltBall56809Activity.class);
@@ -96,7 +96,7 @@ public class DemoTiltBallSetup extends Activity
 		startActivity(i);
 
 		// comment out (return to setup after clicking BACK in main activity
-		//finish();
+		finish();
 	}
 
 	/** Called when the "Exit" button is pressed. */

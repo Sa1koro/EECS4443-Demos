@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.media.MediaPlayer;
 import android.os.Vibrator;
 import android.util.AttributeSet;
 import android.view.View;
@@ -18,6 +19,8 @@ import java.util.Random;
 //import Timer for User Performance Data
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.List;
+import java.util.ArrayList;
 
 public class RollingBallPanel extends View
 {
@@ -73,7 +76,7 @@ public class RollingBallPanel extends View
     float[] updateY;
 
     // add laps numbers and  Ball's direction arrow
-    int currentLap, numbersOfLaps;
+    int currentLap;
     // declare variables for direction arrow
     // Lap line coordinates
     private float lapLineX;
@@ -84,8 +87,6 @@ public class RollingBallPanel extends View
     // Paint object for the lap line
     private Paint lapLinePaint;
 
-    // Paint object for the direction arrow
-    private Paint directionArrowPaint;
 
     // Variables for arrow direction
     private boolean clockwiseDirection; // 控制方向
@@ -101,12 +102,20 @@ public class RollingBallPanel extends View
     private Random random;
 
     // add  variables for Timer
-    long lapStartTime = 0;
+    private long lapStartTime; // 当前圈开始时间 = 0;
     float[] Times;
     boolean isBallInsidePath;
     double outsideOfPathTime = -1;
     double totalTimeOutsidePath = 0;
-    double experimentStartTime = -1;
+    private long experimentStartTime; // 实验开始时间= -1;
+
+    // add new variables for Task4.4 User Performance Data.
+    int targetLaps; // 目标圈数（从Bundle获取）
+    private List<Long> lapTimes = new ArrayList<>(); // 存储每圈时间
+    private boolean hasCrossedMidline; // 防作弊标志（是否经过中线）
+    private long totalInPathTime; // 总路径内时间
+    private MediaPlayer lapSound; // 圈数音效
+    private boolean wasInsidePath; // 用于墙壁碰撞检测
 
 
     public RollingBallPanel(Context contextArg)
@@ -279,6 +288,10 @@ public class RollingBallPanel extends View
      */
     public void updateBallPosition(float pitchArg, float rollArg, float tiltAngleArg, float tiltMagnitudeArg)
     {
+        //keep the ball position of the last frame
+        float prevX = xBallCenter;
+        float prevY = yBallCenter;
+
         pitch = pitchArg; // for information only (see onDraw)
         roll = rollArg; // for information only (see onDraw)
         tiltAngle = tiltAngleArg;
@@ -407,7 +420,7 @@ public class RollingBallPanel extends View
         if (pathType == PATH_TYPE_SQUARE || pathType == PATH_TYPE_CIRCLE)
         {
             canvas.drawText("Wall hits = " + wallHits, 6f, updateY[7], statsPaint);
-            canvas.drawText("Numbers of laps = " + numbersOfLaps + "/" + currentLap, 6f, updateY[6], statsPaint);
+            canvas.drawText("Numbers of laps = " + currentLap + "/" + targetLaps, 6f, updateY[6], statsPaint);
             long lapTime;
             if (lapStartTime == 0) {
                 lapTime = lapStartTime;
@@ -480,7 +493,7 @@ public class RollingBallPanel extends View
     /*
      * Configure the rolling ball panel according to setup parameters
      */
-    public void configure(String pathMode, String pathWidthArg, int gainArg, String orderOfControlArg)
+    public void configure(String pathMode, String pathWidthArg, int gainArg, String orderOfControlArg, int numbersOfLaps)
     {
         // square vs. circle
         if (pathMode.equals("Square"))
@@ -503,6 +516,8 @@ public class RollingBallPanel extends View
 
         // Generate a random arrow direction
         clockwiseDirection = new Random().nextBoolean();
+        // Set the numbers of Laps
+        targetLaps = numbersOfLaps;
     }
 
     // returns true if the ball is touching (i.e., overlapping) the line of the inner or outer path border
@@ -535,6 +550,10 @@ public class RollingBallPanel extends View
         return false;
     }
 
+    /**
+     * Check if the ball is touching the lap line
+     * @return
+     */
     public boolean ballTouchingLapLine(){
         ballNow.left = xBall;
         ballNow.top = yBall;
@@ -544,6 +563,25 @@ public class RollingBallPanel extends View
         float toYArrow = (float)Math.cos(tiltAngle * DEGREES_TO_RADIANS);
 
         return toYArrow > 0 && RectF.intersects(ballNow, outerRectangle);
+    }
+
+    /**
+     * Check if the ball is crossing the lap line via a valid directions
+      * @param prevX
+     * @param prevY
+     * @return
+     */
+    public boolean isValidLapCrossing(float prevX, float prevY) {
+        final float lapLineX = width * 0.8f; // 右侧20%位置为圈线
+
+        // 方向验证逻辑
+        if(clockwiseDirection) {
+            // 顺时针：从左到右穿越圈线
+            return prevX < lapLineX && xBallCenter >= lapLineX;
+        } else {
+            // 逆时针：从右到左穿越圈线
+            return prevX > lapLineX && xBallCenter <= lapLineX;
+        }
     }
 
 }
