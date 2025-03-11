@@ -6,12 +6,18 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.os.Vibrator;
 import android.util.AttributeSet;
 import android.view.View;
 
 import java.util.Locale;
+//import Random for Lap Direction Indicators
+import java.util.Random;
+//import Timer for User Performance Data
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class RollingBallPanel extends View
 {
@@ -65,6 +71,43 @@ public class RollingBallPanel extends View
     long now, lastT;
     Paint statsPaint, labelPaint, linePaint, fillPaint, backgroundPaint;
     float[] updateY;
+
+    // add laps numbers and  Ball's direction arrow
+    int currentLap, numbersOfLaps;
+    // declare variables for direction arrow
+    // Lap line coordinates
+    private float lapLineX;
+    private float lapLineY;
+    private float lapLineX1;
+    private float lapLineY1;
+
+    // Paint object for the lap line
+    private Paint lapLinePaint;
+
+    // Paint object for the direction arrow
+    private Paint directionArrowPaint;
+
+    // Variables for arrow direction
+    private boolean clockwiseDirection; // 控制方向
+    private  Paint arrowPaint;
+    private  Path arrowPath;
+    private boolean arrowDirectionUp; // true if arrow points up, false if down
+    private float arrowXStart;
+    private float arrowYStart;
+    private float arrowXEnd;
+    private float arrowYEnd;
+
+    // Random number generator
+    private Random random;
+
+    // add  variables for Timer
+    long lapStartTime = 0;
+    float[] Times;
+    boolean isBallInsidePath;
+    double outsideOfPathTime = -1;
+    double totalTimeOutsidePath = 0;
+    double experimentStartTime = -1;
+
 
     public RollingBallPanel(Context contextArg)
     {
@@ -122,6 +165,27 @@ public class RollingBallPanel extends View
         outerShadowRectangle = new RectF();
         ballNow = new RectF();
         wallHits = 0;
+        // add current lap number
+        currentLap = 0;
+
+        // Initialize the lap line paint
+        lapLinePaint = new Paint();
+        lapLinePaint.setColor(Color.RED); // Example: Red lap line
+        lapLinePaint.setStrokeWidth(5f); // Example: 5-pixel wide line
+        lapLinePaint.setStyle(Paint.Style.STROKE); // Draw a line, not a filled shape
+
+        // Initialize the direction arrow paint
+        arrowPaint = new Paint();
+        arrowPaint.setColor(Color.BLUE);
+        arrowPaint.setStyle(Paint.Style.FILL_AND_STROKE);
+        arrowPaint.setStrokeWidth(4f);
+        arrowPaint.setAntiAlias(true);
+
+        arrowPath = new Path();
+        arrowPath.moveTo(0, 0);
+        arrowPath.lineTo(-20, -40);
+        arrowPath.lineTo(20, -40);
+        arrowPath.close();
 
         vib = (Vibrator)c.getSystemService(Context.VIBRATOR_SERVICE);
     }
@@ -173,6 +237,12 @@ public class RollingBallPanel extends View
         innerRectangle.right = xCenter + radiusInner;
         innerRectangle.bottom = yCenter + radiusInner;
 
+        // add variables for lap line
+        lapLineX = innerRectangle.left;
+        lapLineY = innerRectangle.top + (innerRectangle.bottom - innerRectangle.top) / 2;
+        lapLineX1 = outerRectangle.left;
+        lapLineY1 = lapLineY;
+
         // configure outer shadow rectangle (needed to determine wall hits)
         // NOTE: line thickness (aka stroke width) is 2
         outerShadowRectangle.left = outerRectangle.left + ballDiameter - 2f;
@@ -198,7 +268,7 @@ public class RollingBallPanel extends View
         offset = (int)(DEFAULT_OFFSET * pixelDensity + 0.5f);
 
         // compute y offsets for painting stats (bottom-left of display)
-        updateY = new float[6]; // up to 6 lines of stats will appear
+        updateY = new float[9]; // up to 6 lines of stats will appear
         for (int i = 0; i < updateY.length; ++i)
             updateY[i] = height - offset - i * (statsTextSize + gap);
     }
@@ -281,6 +351,12 @@ public class RollingBallPanel extends View
 
     protected void onDraw(Canvas canvas)
     {
+        // add variables for lap line
+        float   lapLineX = innerRectangle.left,
+                lapLineY = innerRectangle.top + (innerRectangle.bottom - innerRectangle.top) / 2,
+                lapLineX1 = outerRectangle.left,
+                lapLineY1 = lapLineY;
+
         // check if view is ready for drawing
         if (updateY == null)
             return;
@@ -295,6 +371,7 @@ public class RollingBallPanel extends View
             // draw lines
             canvas.drawRect(outerRectangle, linePaint);
             canvas.drawRect(innerRectangle, linePaint);
+
         } else if (pathType == PATH_TYPE_CIRCLE)
         {
             // draw fills
@@ -304,7 +381,24 @@ public class RollingBallPanel extends View
             // draw lines
             canvas.drawOval(outerRectangle, linePaint);
             canvas.drawOval(innerRectangle, linePaint);
+
+
         }
+
+        // Draw the direction arrow
+        // 绘制方向箭头（在屏幕中心）
+        canvas.save();
+        canvas.translate(width/2f, height/2f); // 移动到中心
+
+        // 根据方向旋转画布
+        canvas.rotate(clockwiseDirection ? 0 : 180);
+
+        // 绘制箭头（自动适应方向）
+        canvas.drawPath(arrowPath, arrowPaint);
+        canvas.restore();
+
+        // Draw the lap line
+        canvas.drawLine(lapLineX, lapLineY, lapLineX1, lapLineY1, lapLinePaint);
 
         // draw label
         canvas.drawText("Demo_TiltBall", 6f, labelTextSize, labelPaint);
@@ -312,7 +406,15 @@ public class RollingBallPanel extends View
         // draw stats (pitch, roll, tilt angle, tilt magnitude)
         if (pathType == PATH_TYPE_SQUARE || pathType == PATH_TYPE_CIRCLE)
         {
-            canvas.drawText("Wall hits = " + wallHits, 6f, updateY[5], statsPaint);
+            canvas.drawText("Wall hits = " + wallHits, 6f, updateY[7], statsPaint);
+            canvas.drawText("Numbers of laps = " + numbersOfLaps + "/" + currentLap, 6f, updateY[6], statsPaint);
+            long lapTime;
+            if (lapStartTime == 0) {
+                lapTime = lapStartTime;
+            } else{
+                lapTime = System.currentTimeMillis() - lapStartTime/1000;
+            }
+            canvas.drawText("Lap times: " + lapTime, 6f, updateY[5], statsPaint);
             canvas.drawText("-----------------", 6f, updateY[4], statsPaint);
         }
         canvas.drawText(String.format(Locale.CANADA, "Tablet pitch (degrees) = %.2f", pitch), 6f, updateY[3],
@@ -324,7 +426,56 @@ public class RollingBallPanel extends View
         // draw the ball in its new location
         canvas.drawBitmap(ball, xBall, yBall, null);
 
+
     } // end onDraw
+
+    /**
+     * Draw an lap line
+     * @param paint
+     * @param canvas
+     * @param fromX
+     * @param fromY
+     * @param toX
+     * @param toY
+     */
+    private void drawArrow(Paint paint, Canvas canvas, float fromX, float fromY, float toX, float toY) {
+        float angle, anglerad, radius, lineangle;
+
+        //values to change for other appearance
+        radius = 30f;
+        angle = 35f;
+
+        anglerad = (float) Math.toRadians(angle);
+        lineangle = (float) Math.toRadians(angle / 2);
+
+        canvas.drawLine(fromX, fromY, toX, toY, paint);
+
+        Path path = new Path();
+        path.setFillType(Path.FillType.EVEN_ODD);
+        path.moveTo(toX, toY);
+        path.lineTo((float) (toX - radius * Math.cos(lineangle - (anglerad / 2.0))), (float) (toY - radius * Math.sin(lineangle - (anglerad / 2.0))));
+        path.lineTo((float) (toX - radius * Math.cos(lineangle + (anglerad / 2.0))), (float) (toY - radius * Math.sin(lineangle + (anglerad / 2.0))));
+        path.close();
+
+        canvas.drawPath(path, paint);
+
+    }
+
+    // Call this method when a new game starts
+    public void resetArrowDirection() {
+        // Randomly choose the arrow direction (up or down)
+        arrowDirectionUp = random.nextBoolean();
+
+        // Set the arrow's end point based on the chosen direction
+        if (arrowDirectionUp) {
+            arrowXEnd = arrowXStart;
+            arrowYEnd = arrowYStart - 100; // Pointing up
+        } else {
+            arrowXEnd = arrowXStart;
+            arrowYEnd = arrowYStart + 100; // Pointing down
+        }
+    }
+
 
     /*
      * Configure the rolling ball panel according to setup parameters
@@ -349,6 +500,9 @@ public class RollingBallPanel extends View
 
         gain = gainArg;
         orderOfControl = orderOfControlArg;
+
+        // Generate a random arrow direction
+        clockwiseDirection = new Random().nextBoolean();
     }
 
     // returns true if the ball is touching (i.e., overlapping) the line of the inner or outer path border
@@ -380,4 +534,16 @@ public class RollingBallPanel extends View
         }
         return false;
     }
+
+    public boolean ballTouchingLapLine(){
+        ballNow.left = xBall;
+        ballNow.top = yBall;
+        ballNow.right = xBall + ballDiameter;
+        ballNow.bottom = yBall + ballDiameter;
+
+        float toYArrow = (float)Math.cos(tiltAngle * DEGREES_TO_RADIANS);
+
+        return toYArrow > 0 && RectF.intersects(ballNow, outerRectangle);
+    }
+
 }

@@ -86,6 +86,10 @@ public class DemoTiltBallSetup extends Activity
 		b.putString("pathType", pathType);
 		b.putString("pathWidth", pathWidth);
 
+		// pass number of laps to click
+		String numberOfLaps = NUMBER_OF_LAPS[spinNumberOfLaps.getSelectedItemPosition()];
+		b.putString("numberOfLaps", numberOfLaps);
+
 		// start experiment activity
 		Intent i = new Intent(getApplicationContext(), DemoTiltBall56809Activity.class);
 		i.putExtras(b);
