@@ -42,19 +42,29 @@
             android:onClick="clickReset"
             android:text="@string/resetbuttontext" />
 
-        <Button
-            android:id="@+id/captureImageButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Capture Image"
-            android:onClick="captureImage"/>
 
+<!--        <Button-->
+<!--            android:id="@+id/takephoto"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="50dp"-->
+<!--            android:layout_weight="1"-->
+<!--            android:layout_marginLeft="3dp"-->
+<!--            android:layout_marginRight="3dp"-->
+<!--            android:onClick="clickTakePhoto"-->
+<!--            android:text="Take Photo" />-->
+
+        <!-- 在原有按钮布局中添加新按钮 -->
         <Button
-            android:id="@+id/toggleFilterButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:onClick="clickToggleFilter"
-            android:text="Toggle Filter"/>
+            android:id="@+id/selectImageButton"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginLeft="3dp"
+            android:layout_marginRight="3dp"
+            android:layout_weight="1"
+            android:onClick="clickSelectImage"
+            android:text="Pick Photo"
+            android:textScaleX="0.9"
+            android:textSize="16sp" />
     </LinearLayout>
 
 </LinearLayout>

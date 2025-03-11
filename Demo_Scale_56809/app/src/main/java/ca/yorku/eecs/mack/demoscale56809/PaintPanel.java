@@ -1,14 +1,11 @@
 package ca.yorku.eecs.mack.demoscale56809;
 
+
+import android.animation.ValueAnimator;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.RectF;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.ColorMatrix;
-import android.graphics.ColorMatrixColorFilter;
-import android.graphics.Paint;
 import android.os.CountDownTimer;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
@@ -48,8 +45,62 @@ public class PaintPanel extends View
     private float xRatio, yRatio;
     private float flingVelocity;
     private float flingAngle;
-    private boolean isZoomedIn = false; // [Student's change for double-tap toggle]
-    private boolean isGray = false; // [Student's change for filter toggle]
+
+    private boolean doubleTapZoomIn = true; // add boolean of tapZoom
+    private float screenWidth, screenHeight;
+    private ValueAnimator boundaryAnimator; // add value for boundary limit
+    /**
+     * Initialize boundary check
+     */
+    private void initializeBoundaryCheck(Context context) {
+        // 获取屏幕尺寸（需在布局完成后获取，因此放在 post 方法中）
+        post(new Runnable() {
+            @Override
+            public void run() {
+                screenWidth = getWidth();
+                screenHeight = getHeight();
+            }
+        });
+    }
+
+    private void enforceBoundaryConstraints() {
+        float imageWidth = imageIntrinsicWidth * scaleFactor;
+        float imageHeight = imageIntrinsicHeight * scaleFactor;
+
+        // 计算图像实际可见边界
+        float leftBound = Math.min(xPosition, screenWidth - imageWidth);
+        float rightBound = Math.max(xPosition, 0);
+        float topBound = Math.min(yPosition, screenHeight - imageHeight);
+        float bottomBound = Math.max(yPosition, 0);
+
+        // 约束位置
+        xPosition = Math.max(0, Math.min(xPosition, screenWidth - imageWidth));
+        yPosition = Math.max(0, Math.min(yPosition, screenHeight - imageHeight));
+
+        // 若越界则触发回弹动画
+        if (leftBound != xPosition || topBound != yPosition) {
+            startBoundaryAnimation(leftBound, topBound);
+        }
+    }
+
+    private void startBoundaryAnimation(float targetX, float targetY) {
+        if (boundaryAnimator != null && boundaryAnimator.isRunning()) {
+            boundaryAnimator.cancel();
+        }
+
+        boundaryAnimator = ValueAnimator.ofFloat(0, 1);
+        boundaryAnimator.setDuration(300);
+        boundaryAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                float fraction = animation.getAnimatedFraction();
+                xPosition = xPosition + (targetX - xPosition) * fraction;
+                yPosition = yPosition + (targetY - yPosition) * fraction;
+                invalidate();
+            }
+        });
+        boundaryAnimator.start();
+    }
 
     // Provide three constructors to correspond to each of the three in View
     public PaintPanel(Context context, AttributeSet attrs, int defStyle)
@@ -70,13 +121,26 @@ public class PaintPanel extends View
         initialize(context);
     }
 
+
+    /**
+     * add method：update target image
+     * @param newImage
+     */
+    public void setTargetImage(Drawable newImage) {
+        this.targetImage = newImage;
+        // 更新固有尺寸
+        imageIntrinsicWidth = targetImage.getIntrinsicWidth();
+        imageIntrinsicHeight = targetImage.getIntrinsicHeight();
+        targetImage.setBounds(0, 0, imageIntrinsicWidth, imageIntrinsicHeight);
+        invalidate(); // 触发重绘
+    }
     private void initialize(Context context)
     {
         this.setBackgroundColor(0xffffafb0); // AARRGGBB: opacity, red, green, blue
-        // [Student's change: remove default varihall image]
-        // targetImage = context.getResources().getDrawable(R.drawable.varihall);
-        imageIntrinsicWidth = 0;
-        imageIntrinsicHeight = 0;
+        targetImage = context.getResources().getDrawable(R.drawable.varihall);
+        imageIntrinsicWidth = targetImage.getIntrinsicWidth();
+        imageIntrinsicHeight = targetImage.getIntrinsicHeight();
+        targetImage.setBounds(0, 0, imageIntrinsicWidth, imageIntrinsicHeight);
         xPosition = 10;
         yPosition = 10;
         scaleFactor = 1f;
@@ -100,30 +164,7 @@ public class PaintPanel extends View
         };
 
         pixelDensity = context.getResources().getDisplayMetrics().density;
-    }
-
-    // [Student's change] Method to set a new bitmap from the camera
-    public void setCapturedImage(Bitmap capturedImage) {
-        targetImage = new BitmapDrawable(getResources(), capturedImage);
-        imageIntrinsicWidth = targetImage.getIntrinsicWidth();
-        imageIntrinsicHeight = targetImage.getIntrinsicHeight();
-        invalidate();
-    }
-
-    // [Student's change] Toggle grayscale color filter
-    public void toggleFilter() {
-        if (!isGray) {
-            ColorMatrix matrix = new ColorMatrix();
-            matrix.setSaturation(0);
-            Paint paint = new Paint();
-            paint.setColorFilter(new ColorMatrixColorFilter(matrix));
-            setLayerType(LAYER_TYPE_HARDWARE, paint);
-            isGray = true;
-        } else {
-            setLayerType(LAYER_TYPE_HARDWARE, null);
-            isGray = false;
-        }
-        invalidate();
+        initializeBoundaryCheck(context);
     }
 
     @Override
@@ -133,9 +174,7 @@ public class PaintPanel extends View
         canvas.save();
         canvas.translate(xPosition, yPosition);
         canvas.scale(scaleFactor, scaleFactor);
-        if (targetImage != null) {
-            targetImage.draw(canvas);
-        }
+        
         canvas.restore();
 
         // update the status panel
@@ -177,9 +216,10 @@ public class PaintPanel extends View
                 {
                     /*
                      * imageSelected is used to ensure the gestures only have their effect if the
-					 * initial ACTION_DOWN was inside the images. See ACTION_MOVE, onScaleBegin,
-					 * onScale, and onFling. This flag is cleared on ACTION_UP.
-					 */
+                     * initial ACTION_DOWN was inside the images. See ACTION_MOVE, onScaleBegin,
+                     * onScale, and onFling. This flag is cleared on ACTION_UP.
+                     */
+
                     imageSelected = true;
                     lastTouchX = x;
                     lastTouchY = y;
@@ -215,6 +255,9 @@ public class PaintPanel extends View
                     lastTouchX = x;
                     lastTouchY = y;
                 }
+
+                enforceBoundaryConstraints();
+
                 break;
             }
 
@@ -238,9 +281,10 @@ public class PaintPanel extends View
                 {
                     /*
                      * This was our active pointer going up. Choose a new active pointer and adjust
-					 * accordingly. To understand why this code is necessary, read the comments
-					 * above -- where activePointerId is declared.
-					 */
+                     * accordingly. To understand why this code is necessary, read the comments
+                     * above -- where activePointerId is declared.
+                     */
+
                     final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
                     lastTouchX = me.getX(newPointerIndex);
                     lastTouchY = me.getY(newPointerIndex);
@@ -359,6 +403,9 @@ public class PaintPanel extends View
             float focusY = detector.getFocusY();
             xPosition = focusX - xRatio * imageIntrinsicWidth * scaleFactor;
             yPosition = focusY - yRatio * imageIntrinsicHeight * scaleFactor;
+
+            enforceBoundaryConstraints();
+
             return true;
         }
     }
@@ -392,38 +439,48 @@ public class PaintPanel extends View
             return true;
         }
 
-        // [Student's change] Implement onDoubleTap to toggle scale factor by ×3 or ÷3
+
+        /**
+         * onDoubleTap - This method is executed when a double-tap gesture is detected.
+         */
         @Override
-        public boolean onDoubleTap(MotionEvent e)
-        {
+        public boolean onDoubleTap(MotionEvent e) {
             float x = e.getX();
             float y = e.getY();
-            // Check if double-tap is on the image
-            float left = xPosition;
-            float top = yPosition;
-            float right = left + imageIntrinsicWidth * scaleFactor;
-            float bottom = top + imageIntrinsicHeight * scaleFactor;
-            if (new RectF(left, top, right, bottom).contains(x, y))
-            {
-                float xOffset = x - xPosition;
-                float yOffset = y - yPosition;
-                float tmpXRatio = xOffset / (imageIntrinsicWidth * scaleFactor);
-                float tmpYRatio = yOffset / (imageIntrinsicHeight * scaleFactor);
 
-                // Toggle scale
-                if (!isZoomedIn) {
-                    scaleFactor *= 3f;
-                    isZoomedIn = true;
-                } else {
-                    scaleFactor /= 3f;
-                    isZoomedIn = false;
-                }
-
-                // Re-center
-                xPosition = x - tmpXRatio * imageIntrinsicWidth * scaleFactor;
-                yPosition = y - tmpYRatio * imageIntrinsicHeight * scaleFactor;
-                invalidate();
+            // 检查是否在图像内部
+            RectF imageRect = new RectF(xPosition, yPosition,
+                    xPosition + imageIntrinsicWidth * scaleFactor,
+                    yPosition + imageIntrinsicHeight * scaleFactor);
+            if (!imageRect.contains(x, y)) {
+                return false;
             }
+
+            // 确定缩放方向和计算新比例
+            boolean zoomIn = doubleTapZoomIn;
+            float newScale = zoomIn ? scaleFactor * 3f : scaleFactor / 3f;
+            newScale = Math.max(0.1f, Math.min(newScale, 10.0f));
+
+            // 计算双击点的相对位置
+            float oldWidth = imageIntrinsicWidth * scaleFactor;
+            float oldHeight = imageIntrinsicHeight * scaleFactor;
+            float relX = (x - xPosition) / oldWidth;
+            float relY = (y - yPosition) / oldHeight;
+
+            // 更新缩放因子
+            scaleFactor = newScale;
+
+            // 计算新位置以保持焦点
+            float newWidth = imageIntrinsicWidth * scaleFactor;
+            float newHeight = imageIntrinsicHeight * scaleFactor;
+            xPosition = x - (relX * newWidth);
+            yPosition = y - (relY * newHeight);
+
+            // 切换标志
+            doubleTapZoomIn = !zoomIn;
+
+            invalidate();
+
             return true;
         }
     }
