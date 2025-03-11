@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+
     android:versionCode="1"
     android:versionName="1.0" >
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    package="ca.yorku.eecs.mack.demoscale56809"
+
+
     <application
         android:theme="@android:style/Theme.Holo"
         android:allowBackup="false"

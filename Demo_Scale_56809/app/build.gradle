@@ -16,4 +16,5 @@ android {
         }
     }
     namespace 'ca.yorku.eecs.mack.demoscale56809'
+
 }

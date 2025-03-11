@@ -1,5 +1,6 @@
 package ca.yorku.eecs.mack.demoscale56809;
 
+
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -44,6 +45,7 @@ public class PaintPanel extends View
     private float xRatio, yRatio;
     private float flingVelocity;
     private float flingAngle;
+
     private boolean doubleTapZoomIn = true; // add boolean of tapZoom
     private float screenWidth, screenHeight;
     private ValueAnimator boundaryAnimator; // add value for boundary limit
@@ -119,6 +121,7 @@ public class PaintPanel extends View
         initialize(context);
     }
 
+
     /**
      * add method：update target image
      * @param newImage
@@ -171,7 +174,7 @@ public class PaintPanel extends View
         canvas.save();
         canvas.translate(xPosition, yPosition);
         canvas.scale(scaleFactor, scaleFactor);
-        targetImage.draw(canvas);
+        
         canvas.restore();
 
         // update the status panel
@@ -216,6 +219,7 @@ public class PaintPanel extends View
                      * initial ACTION_DOWN was inside the images. See ACTION_MOVE, onScaleBegin,
                      * onScale, and onFling. This flag is cleared on ACTION_UP.
                      */
+
                     imageSelected = true;
                     lastTouchX = x;
                     lastTouchY = y;
@@ -251,7 +255,9 @@ public class PaintPanel extends View
                     lastTouchX = x;
                     lastTouchY = y;
                 }
+
                 enforceBoundaryConstraints();
+
                 break;
             }
 
@@ -278,6 +284,7 @@ public class PaintPanel extends View
                      * accordingly. To understand why this code is necessary, read the comments
                      * above -- where activePointerId is declared.
                      */
+
                     final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
                     lastTouchX = me.getX(newPointerIndex);
                     lastTouchY = me.getY(newPointerIndex);
@@ -396,7 +403,9 @@ public class PaintPanel extends View
             float focusY = detector.getFocusY();
             xPosition = focusX - xRatio * imageIntrinsicWidth * scaleFactor;
             yPosition = focusY - yRatio * imageIntrinsicHeight * scaleFactor;
+
             enforceBoundaryConstraints();
+
             return true;
         }
     }
@@ -429,6 +438,7 @@ public class PaintPanel extends View
             flingTimer.start();
             return true;
         }
+
 
         /**
          * onDoubleTap - This method is executed when a double-tap gesture is detected.
@@ -470,6 +480,7 @@ public class PaintPanel extends View
             doubleTapZoomIn = !zoomIn;
 
             invalidate();
+
             return true;
         }
     }

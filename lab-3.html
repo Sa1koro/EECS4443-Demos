@@ -1,0 +1,222 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd"> 
+<HTML>
+<HEAD>
+	<TITLE>EECS 4443 - Lab #3</TITLE>
+	<META http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+	<META http-equiv="Cache-Control" content="no-cache">
+	<META name="Author" content="I. Scott MacKenzie">
+	<META name="robots" content="noindex, nofollow">
+</HEAD>
+<BODY alink="#CC0000" bgcolor="#FFFFFF" link="#FF1908" vlink="#CC0000">
+
+<div align=center>
+<H1 style='color:#CC0000'>EECS 4443 / EECS 5443 &ndash; Mobile User Interfaces</H1>
+
+<h3>Winter 2022</h3>
+
+<H2 style='color:#CC0000'>Lab #3</H2>
+
+<center>
+<a href="images/lab3-0a.jpg"><img src="images/lab3-0a.jpg" width="100"></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="images/lab3-0b.jpg"><img src="images/lab3-0b.jpg" width="100"></a>
+</center>
+</p>
+
+</p>&nbsp;</p>
+</div>
+
+<font size="+1"><blockquote>
+
+<H3 style='color:#CC0000'>Introduction</H3>
+
+</p>In this lab exercise, you will study and modify the 
+<a href="../../Demo_Scale.zip">Demo_Scale</a> Android application.  The application demonstrates the most common types of finger gestures 
+used in Android UIs.  
+These include single-finger touch, move, and fling gestures and multitouch pinch and un-pinch gestures.
+</p>
+
+One deficiency in the demo program is that it does not support a double-tap gesture to zoom-in and zoom-out of the image.  
+You are also asked to implement this feature as part of this lab excerise.
+</p>
+
+Preparation:
+</p>
+
+<ol>
+<li>Previous Labs &ndash;  If you have not completed Lab #1 and Lab #2, do so now before proceeding with this lab exercise.
+</p>
+
+<li>Demo_Touch & Demo_MultiTouch &ndash;  These demo programs were discussed and demonstrated during classroom lectures.  Now it's your 
+turn. 
+Download the 
+<a href="../../Demo_Touch.zip">Demo_Touch</a> and <a href="../../Demo_Multitouch.zip">Demo_Multitouch</a> project files and create the 
+corresponding
+Android projects.  
+Run the applications and observe their behaviour.  
+As well, study the JavaDoc (API), the linked-to resources, the source Java code, and the comments within.
+</p>
+</ol>
+</p>
+
+As with the other labs, you should treat this lab as an assignment.&nbsp;
+Try to finish the lab prior to the scheduled lab period.&nbsp;
+Debugging is time-consuming and the scheduled lab will be busy.&nbsp;
+The TA will work with all students, as time permits, checking work and helping with debugging. 
+
+</p>&nbsp;</p>
+<!---------------------------------------->
+<H3 style='color:#CC0000'>Objectives</H3>
+
+Upon completing this lab, students will have the skills to do the following:
+</p>
+
+<ul>
+<li>Implement an Android application that includes finger-touch gestures, such as touch, multitouch, pinch, fling, double-tap, etc.
+<li>Implement an Android application that uses finger gestures to move, scale, and manipulate an image.
+</ul>
+</p><br></p>
+
+<!---------------------------------------->
+<hr>
+<H3 style='color:#CC0000'>Task 1 &ndash; Load the &ldquo;Demo_Scale&rdquo; Project</H3>
+
+</p>Download the <a href="../../Demo_Scale.zip">Demo_Scale</a> project file and create an Android project in your workspace.&nbsp;  
+Follow the same procedure as given in Lab #1, Task 2.
+</p>
+
+Read the JavaDoc (API) for Demo_Scale, including the linked-to resources.&nbsp;
+Study the source code.&nbsp;
+There are three source files:
+</p>
+
+<ul>
+<li><code>DemoScaleActivity.java</code> &ndash; the main activity for the application
+<li><code>PaintPanel.java</code> &ndash; a view that displays the image
+<li><code>StatusPanel.java</code>&ndash; a view that displays status information about the image
+</ul>
+</p>
+
+Of course, all three are important, but pay particular attention to <code>PaintPanel.java</code>.&nbsp;
+The <code>PaintPanel</code> class extends <code>View</code>.&nbsp;
+This is where the image is displayed and where finger-touch gestures are implemented.
+</p><br></p>
+
+<!---------------------------------------->
+<hr>
+<H3 style='color:#CC0000'>Task 2 &ndash; Run the Application</H3>
+
+Run Demo_Scale.  Follow the same procedure as given in Lab #1, Task 3.
+</p>
+
+Observe the application's behaviour.&nbsp;
+Use your finger for simple touch, move, and fling gestures.&nbsp;
+Use two fingers for a pinch gesture to zoom-in and zoom-out.
+</p><br></p>
+
+<!---------------------------------------->
+<hr>
+<h3 style='color:#CC0000'>Task 3 &ndash; Personalize the Project</h3>
+
+Make a personalized version of the Demo_Scale project.&nbsp;
+Follow the same procedure as given in Lab #1, Task 4.
+</p>
+
+All modifications (see next Task) are to be made in the new personalized version of the project, not in Demo_Scale.
+</p><br></p>
+
+<!---------------------------------------->
+<hr>
+<H3 style='color:#CC0000'>Task 4 &ndash; Modify, Debug</H3>
+
+Make the following changes to the personalized project.&nbsp;
+As with Lab #1, please document your changes via source-code comments.&nbsp;
+Indicate what you did, and why you did it.
+</p>
+
+<ol>
+<li><b>New Image</b>.&nbsp;
+Replace the image of Vari Hall with a new image taken from your device's built-in camera.&nbsp;
+The new image should be of a building or scene on the York University campus.
+</p>
+
+
+
+<li><b>Double-tap Gesture</b>.&nbsp;
+Android's <code>GestureDetector.SimpleOnGestureListener</code> 
+class is a convenience class that provides an empty implementation
+of nine single-finger touch gestures.&nbsp;
+The <code>PaintPanel</code> class in the Demo_Scale project includes an inner class
+called <code>MyGestureListener</code> that extends 
+this class and provides an implementation for <code>onFling</code>.&nbsp;
+Let's add an implementation for <code>onDoubleTap</code>.
+</p>
+
+Provide an implementation for a double-tap gesture to zoom the image in and out.&nbsp;
+When a double-tap is detected, the size of the 
+image scales up by a factor of three from its current size (&times;3).&nbsp;
+The next double-tap scales down by a factor of three (&divide;3).&nbsp;
+
+</p>
+The following two requirements must be met for the double-tap gesture:</p></p>
+
+<ul>
+<li>Scaling only occurs if the double-tap is <i>on the image</i>.&nbsp;
+</p>
+
+<li>Scaling is centred at the location of the double-tap.
+</p>
+</ul>
+
+<b>NOTE:</b> If you are using Android 4.2 or later, you need to have Magnification Gestures turned off in order to 
+implement double-tap gestures.  Go to Settings > Accessibility > Magnification Gestures.  Change the setting to <I>off</I>.
+<p>
+
+<li><b>Original Feature</b>.&nbsp;
+Add a new feature of your own design.  
+This requirement is open-ended: It's up to you! 
+Add some feature to the UI that makes it a better user interface.  
+Try to be original.
+
+</ol>
+
+
+
+</ol>
+</p><br></p>
+
+<!---------------------------------------->
+<hr>
+<H3 style='color:#CC0000'>Task 5 &ndash; TA Checkpoint</H3>
+
+
+<table width="90%" border="0" align="center">
+<tr valign="top">
+<td width="170" valign="top"><h3><strong><em><img src="images/checkpoint.png" width="50" height="30" align="top"> 
+Checkpoint</em></strong></h3></td>
+<td></p>
+	When ready, write your name and workstation number on the whiteboard and the TA will meet with you as soon as he or she can.</p>
+    </p>Be ready to answer TA questions about the modifications you have made or other details in the modified demo program.</p></td>
+  </tr>
+</table>
+
+
+
+<!---------------------------------------->
+<hr>
+<H3 style='color:#CC0000'>Task 6 &ndash; Zip and Upload the Modified Project</H3>
+
+After the TA has "checked off" your modified project, create a single zip file of the entire project and upload it on eClass for Lab 3.&nbsp; 
+Follow the procedure given in Lab #1, Task 7.&nbsp; Of course, for this lab, you are uploading "<code>4443 lab<u>3</u></code>" and 
+you are uploading <code>Demo_Scale_<I>99999</I>.zip</code> where 
+<code><I>99999</I></code> is the last five (5) digits of your student number.
+</p><br></p>
+
+NOTE: To receive a grade for a lab, you must upload the zip file <I>and</I> demo your work to the TA (and get "checked off").&nbsp;   
+The demo must be done during the scheduled lab period.  
+
+</p><br>
+<div align=center>--- End of Exercise ---</div>
+
+</font></blockquote>
+</BODY>
+</HTML>

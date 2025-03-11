@@ -42,6 +42,7 @@
             android:onClick="clickReset"
             android:text="@string/resetbuttontext" />
 
+
 <!--        <Button-->
 <!--            android:id="@+id/takephoto"-->
 <!--            android:layout_width="0dp"-->

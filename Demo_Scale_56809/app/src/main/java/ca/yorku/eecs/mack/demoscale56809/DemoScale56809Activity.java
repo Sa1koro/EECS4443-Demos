@@ -24,8 +24,10 @@ public class DemoScale56809Activity extends Activity
     PaintPanel imagePanel; // the panel in which to paint the image
     StatusPanel statusPanel; // a status panel the display the image coordinates, size, and scale
 
+
     // define the request code for the image picker
     private static final int PICK_IMAGE_REQUEST = 1;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -41,6 +43,7 @@ public class DemoScale56809Activity extends Activity
         // give the image panel a reference to the status panel
         imagePanel.setStatusPanel(statusPanel);
     }
+
 
     /**
      * Add method：Handle Pick Photo Button Click
@@ -76,6 +79,7 @@ public class DemoScale56809Activity extends Activity
         }
     }
 
+
     // Called when the "Reset" button is pressed.
     public void clickReset(View view)
     {
@@ -84,6 +88,5 @@ public class DemoScale56809Activity extends Activity
         imagePanel.scaleFactor = 1f;
         imagePanel.invalidate();
     }
-
 
 }
