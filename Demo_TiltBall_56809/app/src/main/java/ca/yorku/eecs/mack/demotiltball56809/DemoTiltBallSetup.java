@@ -23,6 +23,10 @@ public class DemoTiltBallSetup extends Activity
 
 	Spinner spinOrderOfControl, spinGain, spinPathMode, spinPathWidth;
 
+	// Add laps option
+	final static String[] NUMBER_OF_LAPS = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+	Spinner spinNumberOfLaps;
+
 	// called when the activity is first created
 	@Override
 	public void onCreate(Bundle savedInstanceState) 
@@ -51,6 +55,12 @@ public class DemoTiltBallSetup extends Activity
 		ArrayAdapter<CharSequence> adapter4 = new ArrayAdapter<CharSequence>(this, R.layout.spinnerstyle, PATH_WIDTH);
 		spinPathWidth.setAdapter(adapter4);
 		spinPathWidth.setSelection(1); // medium
+
+		// Initialize the laps of spinner
+		spinNumberOfLaps = (Spinner) findViewById(R.id.paramNumberOfLaps);
+		ArrayAdapter<CharSequence> adapter5 = new ArrayAdapter<>(this, R.layout.spinnerstyle, NUMBER_OF_LAPS);
+		spinNumberOfLaps.setAdapter(adapter5);
+		spinNumberOfLaps.setSelection(0);
 	}
 
 	// called when the "OK" button is tapped

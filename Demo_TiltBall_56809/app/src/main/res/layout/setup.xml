@@ -98,6 +98,22 @@
                     android:gravity="left"
                     android:textAppearance="?android:attr/textAppearanceMedium"/>
             </TableRow>
+
+            <!--add the Numbers of Laps in setup-->
+            <TableRow>
+                <TextView
+                    android:id="@+id/paramLabelNumberOfLaps"
+                    android:gravity="right"
+                    android:paddingRight="5dp"
+                    android:text="@string/paramlabelnumberoflapstext"
+                    android:textAppearance="?android:attr/textAppearanceMedium"/>
+                <Spinner
+                    android:id="@+id/paramNumberOfLaps"
+                    android:layout_weight="1"
+                    android:gravity="left"
+                    android:textAppearance="?android:attr/textAppearanceMedium"/>
+            </TableRow>
+
         </TableLayout>
 
         <LinearLayout
