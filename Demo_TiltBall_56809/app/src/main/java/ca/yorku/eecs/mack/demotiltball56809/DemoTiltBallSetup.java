@@ -96,7 +96,7 @@ public class DemoTiltBallSetup extends Activity
 		startActivity(i);
 
 		// comment out (return to setup after clicking BACK in main activity
-		finish();
+		//finish();
 	}
 
 	/** Called when the "Exit" button is pressed. */
