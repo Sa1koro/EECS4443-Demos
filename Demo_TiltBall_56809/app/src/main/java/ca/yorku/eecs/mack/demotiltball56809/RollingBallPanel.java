@@ -114,7 +114,7 @@ public class RollingBallPanel extends View
     private boolean lapInProgress = false; // Track if a lap is in progress
     private long totalInPathTime; // 总路径内时间
     private boolean wasInsidePath; // 用于墙壁碰撞检测
-    RectF detectOutRect, detectInRect, startOval;
+    RectF detectOutRect, detectInRect, startOval, lapLineRectangle;
 
 
     // Midline for anti-cheat verification
@@ -122,7 +122,8 @@ public class RollingBallPanel extends View
     private Paint midlinePaint;
     private boolean midlineCrossed = false;
     float prevXBallCenter, prevYBallCenter; // previous center of the ball position (for tracking direction)
-    private long lastLapTime = 0;
+    private float movementAngle; // Angle of movement direction
+
 
 
     // add new variable for soundEffect
@@ -228,6 +229,9 @@ public class RollingBallPanel extends View
         vib = (Vibrator)c.getSystemService(Context.VIBRATOR_SERVICE);
         // initialize the audio signal
         toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
+
+        //initialize lapline rectangle
+        lapLineRectangle = new RectF();
 
         // Initialize random generator for direction
         random = new Random();
@@ -410,6 +414,12 @@ public class RollingBallPanel extends View
 
         // Check if ball is inside the path
         boolean currentlyInsidePath = isInsidePath();
+        boolean currentlyInside = isInsidePath();
+        if (wasInsidePath && !currentlyInside && ballTouchingLine()) {
+            vib.vibrate(50);
+            wallHits++;
+        }
+        wasInsidePath = currentlyInside;
 
         // Track time outside path
         if (isBallInsidePath && !currentlyInsidePath) {
@@ -433,6 +443,8 @@ public class RollingBallPanel extends View
             }
         }
 
+
+
         // Check for lap line crossing in the correct direction
         checkLapCompletion();
 
@@ -448,48 +460,52 @@ public class RollingBallPanel extends View
      */
     private void checkLapCompletion() {
         // Check if ball is crossing the lap line
-        boolean crossingLapLine = isCrossingLapLine();
+        boolean crossingLapLine = ballTouchingLapLine() && isValidCrossing();
 
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastLapTime > 1000) { // 1秒冷却时间
-            toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
-            lastLapTime = currentTime;
-        }
-
-        if (crossingLapLine && midlineCrossed && currentLap < targetLaps) {
+//        if (currentTime - lastLapTime > 1000) { // 1秒冷却时间
+//            toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
+//            lastLapTime = currentTime;
+//        }
+//&& midlineCrossed
+        if (crossingLapLine && currentLap < targetLaps) {
             currentLap++;
             midlineCrossed = false; // 重置中线标志
             toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
         }
     }
     /**
-     * Check if the ball is crossing the lap line in the correct direction
+     * Check if the ball is crossing the lap line via a valid direction
      */
-    private boolean isCrossingLapLine() {
-        if (pathType == PATH_TYPE_SQUARE) {
+    private boolean isValidCrossing() {
+        if (pathType == PATH_TYPE_SQUARE || pathType == PATH_TYPE_CIRCLE) {
             // 方形路径：判断横向穿越
             if (clockwiseDirection) {
-                // 顺时针：从右向左穿过右侧圈线
-                return prevXBallCenter >= lapLineX && xBallCenter < lapLineX
+                // 顺时针：从上到下穿过右侧圈线
+                return prevYBallCenter <= lapLineY && yBallCenter > lapLineY
                         && Math.abs(yBallCenter - lapLineY) < ballDiameter/2;
             } else {
-                // 逆时针：从左向右穿过右侧圈线
-                return prevXBallCenter <= lapLineX && xBallCenter > lapLineX
+                // 逆时针：从下到上穿过右侧圈线
+                return prevYBallCenter >= lapLineY && yBallCenter < lapLineY
                         && Math.abs(yBallCenter - lapLineY) < ballDiameter/2;
             }
-        } else if (pathType == PATH_TYPE_CIRCLE) {
-            // 圆形路径：判断径向穿越
-            float prevAngle = (float) Math.toDegrees(Math.atan2(prevYBallCenter - yCenter, prevXBallCenter - xCenter));
-            float currentAngle = (float) Math.toDegrees(Math.atan2(yBallCenter - yCenter, xBallCenter - xCenter));
-            if (clockwiseDirection) {
-                // 顺时针：角度减少超过 180 度视为穿越
-                return (prevAngle - currentAngle) > 180;
-            } else {
-                // 逆时针：角度增加超过 180 度视为穿越
-                return (currentAngle - prevAngle) > 180;
-            }
+        } else {
+            return false;
         }
-        return false;
+
+    }
+
+    /**
+     * Check if the ball is touching the lap line
+     * @return
+     */
+    public boolean ballTouchingLapLine(){
+        ballNow.left = xBall;
+        ballNow.top = yBall;
+        ballNow.right = xBall + ballDiameter;
+        ballNow.bottom = yBall + ballDiameter;
+
+        return RectF.intersects(ballNow, lapLineRectangle);
     }
 
     /**
@@ -513,16 +529,17 @@ public class RollingBallPanel extends View
 
     protected void onDraw(Canvas canvas)
     {
-        // add variables for lap line
-        float   lapLineX = innerRectangle.left,
-                lapLineY = innerRectangle.top + (innerRectangle.bottom - innerRectangle.top) / 2,
-                lapLineX1 = outerRectangle.left,
-                lapLineY1 = lapLineY;
 
         // check if view is ready for drawing
         if (updateY == null)
             return;
 
+        // 在onDraw中：
+        if (isBallInsidePath) {
+            fillPaint.setColor(Color.GREEN); // 路径内为绿色
+        } else {
+            fillPaint.setColor(Color.RED);   // 路径外为红色
+        }
         // draw the paths
         if (pathType == PATH_TYPE_SQUARE)
         {
@@ -565,6 +582,10 @@ public class RollingBallPanel extends View
 
         // Draw the lap line
         canvas.drawLine(lapLineX, lapLineY, lapLineX1, lapLineY1, lapLinePaint);
+        lapLineRectangle.top = lapLineY;
+        lapLineRectangle.bottom = lapLineY1;
+        lapLineRectangle.left = lapLineX;
+        lapLineRectangle.right = lapLineX1;
 
         // draw label
         canvas.drawText("Demo_TiltBall_56809", 6f, labelTextSize, labelPaint);
@@ -735,38 +756,5 @@ public class RollingBallPanel extends View
         return false;
     }
 
-    /**
-     * Check if the ball is touching the lap line
-     * @return
-     */
-    public boolean ballTouchingLapLine(){
-        ballNow.left = xBall;
-        ballNow.top = yBall;
-        ballNow.right = xBall + ballDiameter;
-        ballNow.bottom = yBall + ballDiameter;
-
-        float toYArrow = (float)Math.cos(tiltAngle * DEGREES_TO_RADIANS);
-
-        return toYArrow > 0 && RectF.intersects(ballNow, outerRectangle);
-    }
-
-    /**
-     * Check if the ball is crossing the lap line via a valid directions
-      * @param prevX
-     * @param prevY
-     * @return
-     */
-    public boolean isValidLapCrossing(float prevX, float prevY) {
-        final float lapLineX = width * 0.8f; // 右侧20%位置为圈线
-
-        // 方向验证逻辑
-        if(clockwiseDirection) {
-            // 顺时针：从左到右穿越圈线
-            return prevX < lapLineX && xBallCenter >= lapLineX;
-        } else {
-            // 逆时针：从右到左穿越圈线
-            return prevX > lapLineX && xBallCenter <= lapLineX;
-        }
-    }
 
 }
