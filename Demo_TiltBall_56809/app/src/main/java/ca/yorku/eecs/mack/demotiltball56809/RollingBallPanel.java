@@ -23,6 +23,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.List;
 import java.util.ArrayList;
+import android.util.Log;
 
 public class RollingBallPanel extends View
 {
@@ -115,6 +116,7 @@ public class RollingBallPanel extends View
     private long totalInPathTime; // 总路径内时间
     private boolean wasInsidePath; // 用于墙壁碰撞检测
     RectF detectOutRect, detectInRect, startOval, lapLineRectangle;
+    private static final String TAG = "RollingBallPanel";
 
 
     // Midline for anti-cheat verification
@@ -295,14 +297,14 @@ public class RollingBallPanel extends View
         // 在 onWindowFocusChanged 方法中调整圈线位置
         if (pathType == PATH_TYPE_SQUARE) {
             // 方形路径：圈线位于右侧边缘
-            lapLineX = outerRectangle.right;
+            lapLineX1 = outerRectangle.right;
             lapLineY = yCenter;
-            lapLineX1 = innerRectangle.right;
+            lapLineX = innerRectangle.right;
         } else if (pathType == PATH_TYPE_CIRCLE) {
             // 圆形路径：圈线位于右侧（角度 0 度方向）
-            lapLineX = xCenter + radiusOuter;
+            lapLineX1 = xCenter + radiusOuter;
             lapLineY = yCenter;
-            lapLineX1 = xCenter + radiusInner;
+            lapLineX = xCenter + radiusInner;
         }
         lapLineY1 = lapLineY;
         // configure outer shadow rectangle (needed to determine wall hits)
@@ -460,7 +462,7 @@ public class RollingBallPanel extends View
      */
     private void checkLapCompletion() {
         // Check if ball is crossing the lap line
-        boolean crossingLapLine = ballTouchingLapLine() && isValidCrossing();
+        boolean crossingLapLine = isValidCrossing() && ballTouchingLapLine();
 
         long currentTime = System.currentTimeMillis();
 //        if (currentTime - lastLapTime > 1000) { // 1秒冷却时间
@@ -472,26 +474,32 @@ public class RollingBallPanel extends View
             currentLap++;
             midlineCrossed = false; // 重置中线标志
             toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
+            Log.d(TAG, "checkLapCompletion: Lap completed. currentLap=" + currentLap);
+        }else {
+            Log.d(TAG, "checkLapCompletion: Lap not completed. crossingLapLine=" + crossingLapLine + ", currentLap=" + currentLap);
         }
     }
     /**
      * Check if the ball is crossing the lap line via a valid direction
      */
     private boolean isValidCrossing() {
+        boolean validCrossing = false;
+
         if (pathType == PATH_TYPE_SQUARE || pathType == PATH_TYPE_CIRCLE) {
             // 方形路径：判断横向穿越
             if (clockwiseDirection) {
                 // 顺时针：从上到下穿过右侧圈线
-                return prevYBallCenter <= lapLineY && yBallCenter > lapLineY
-                        && Math.abs(yBallCenter - lapLineY) < ballDiameter/2;
+                validCrossing = prevYBallCenter <= lapLineY && yBallCenter > lapLineY
+                        && Math.abs(yBallCenter - lapLineY) < ballDiameter / 2;
             } else {
                 // 逆时针：从下到上穿过右侧圈线
-                return prevYBallCenter >= lapLineY && yBallCenter < lapLineY
-                        && Math.abs(yBallCenter - lapLineY) < ballDiameter/2;
+                validCrossing = prevYBallCenter >= lapLineY && yBallCenter < lapLineY
+                        && Math.abs(yBallCenter - lapLineY) < ballDiameter / 2;
             }
-        } else {
-            return false;
         }
+
+        Log.d(TAG, "isValidCrossing: validCrossing=" + validCrossing + ", prevYBallCenter=" + prevYBallCenter + ", yBallCenter=" + yBallCenter + ", lapLineY=" + lapLineY);
+        return validCrossing;
 
     }
 
@@ -505,7 +513,10 @@ public class RollingBallPanel extends View
         ballNow.right = xBall + ballDiameter;
         ballNow.bottom = yBall + ballDiameter;
 
-        return RectF.intersects(ballNow, lapLineRectangle);
+        boolean intersects = RectF.intersects(ballNow, lapLineRectangle);
+        Log.d(TAG, "TouchLapLine: intersects=" + intersects + ", ballNowRect=" + ballNow + ", lapLineRect=" + lapLineRectangle);
+
+        return intersects;
     }
 
     /**
