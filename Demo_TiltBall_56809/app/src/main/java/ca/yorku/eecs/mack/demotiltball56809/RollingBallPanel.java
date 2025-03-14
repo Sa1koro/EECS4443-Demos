@@ -400,23 +400,29 @@ public class RollingBallPanel extends View
 
         // if ball touches wall, vibrate and increment wallHits count
         // NOTE: We also use a boolean touchFlag so we only vibrate on the first touch
-        if (ballTouchingLine() && !touchFlag)
-        {
-            touchFlag = true; // the ball has *just* touched the line: set the touchFlag
-            vib.vibrate(50); // 50 ms vibrotactile pulse
-            ++wallHits;
+        /*
+         *
+            if (ballTouchingLine() && !touchFlag)
+            {
+                touchFlag = true; // the ball has *just* touched the line: set the touchFlag
+                vib.vibrate(50); // 50 ms vibrotactile pulse
+                ++wallHits;
 
-        } else if (!ballTouchingLine() && touchFlag)
-            touchFlag = false; // the ball is no longer touching the line: clear the touchFlag
+            } else if (!ballTouchingLine() && touchFlag)
+                touchFlag = false; // the ball is no longer touching the line: clear the touchFlag
+         */
 
         // Check if ball is inside the path
         boolean currentlyInsidePath = isInsidePath();
-        boolean currentlyInside = isInsidePath();
-        if (wasInsidePath && !currentlyInside && ballTouchingLine()) {
+        if (wasInsidePath && !currentlyInsidePath && ballTouchingLine()) {
             vib.vibrate(50);
-            wallHits++;
+            ++wallHits;
+            touchFlag = true; // 设置标志，避免重复计数
+        } else if (touchFlag && currentlyInsidePath) {
+            // 球回到路径内，重置标志
+            touchFlag = false;
         }
-        wasInsidePath = currentlyInside;
+        wasInsidePath = currentlyInsidePath;
 
         // Track time outside path
         if (isBallInsidePath && !currentlyInsidePath) {
