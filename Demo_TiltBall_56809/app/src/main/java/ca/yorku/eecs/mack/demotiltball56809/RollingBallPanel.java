@@ -99,6 +99,9 @@ public class RollingBallPanel extends View
     private float arrowXEnd;
     private float arrowYEnd;
 
+    private boolean isFirstCross = true; // Check if this is the first cross
+    private boolean directionDetermined = false; // Check if teh direction has been determined
+
     // Random number generator
     private Random random;
 
@@ -120,11 +123,11 @@ public class RollingBallPanel extends View
 
 
     // Midline for anti-cheat verification
-    private float midlineX;
-    private Paint midlinePaint;
-    private boolean midlineCrossed = false;
+    private float midlineX; // 中线X坐标
+    private int midlineCrossCount; // 当前圈中线穿越次数
+    private boolean wasLeftOfMidline; // 上一帧球是否在中线左侧
     float prevXBallCenter, prevYBallCenter; // previous center of the ball position (for tracking direction)
-    private float movementAngle; // Angle of movement direction
+
 
 
 
@@ -186,14 +189,6 @@ public class RollingBallPanel extends View
         statsPaint.setAntiAlias(true);
         statsPaint.setTextSize(DEFAULT_STATS_TEXT_SIZE);
 
-        // Initialize the midline paint
-        midlinePaint = new Paint();
-        midlinePaint.setColor(Color.GRAY);
-        midlinePaint.setAlpha(50); // Semi-transparent
-        midlinePaint.setStrokeWidth(2f);
-        midlinePaint.setStyle(Paint.Style.STROKE);
-        midlinePaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{10, 10}, 0));
-
         // NOTE: we'll create the actual bitmap in onWindowFocusChanged
         decodedBallBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ball);
 
@@ -207,13 +202,16 @@ public class RollingBallPanel extends View
         ballNow = new RectF();
         wallHits = 0;
         // Initial lap count
-        currentLap = 0;
+        currentLap = -1;
 
         // Initialize the lap line paint
         lapLinePaint = new Paint();
         lapLinePaint.setColor(Color.RED); // Example: Red lap line
         lapLinePaint.setStrokeWidth(5f); // Example: 5-pixel wide line
         lapLinePaint.setStyle(Paint.Style.STROKE); // Draw a line, not a filled shape
+
+        //initialize lapline rectangle
+        lapLineRectangle = new RectF();
 
         // Initialize the direction arrow paint
         arrowPaint = new Paint();
@@ -232,11 +230,6 @@ public class RollingBallPanel extends View
         // initialize the audio signal
         toneGen = new ToneGenerator(AudioManager.STREAM_MUSIC, 100);
 
-        //initialize lapline rectangle
-        lapLineRectangle = new RectF();
-
-        // Initialize random generator for direction
-        random = new Random();
     }
 
     /**
@@ -290,10 +283,6 @@ public class RollingBallPanel extends View
         innerRectangle.bottom = yCenter + radiusInner;
 
 
-        // Setup midline (vertical line through center for anti-cheat)
-        midlineX = xCenter;
-
-
         // 在 onWindowFocusChanged 方法中调整圈线位置
         if (pathType == PATH_TYPE_SQUARE) {
             // 方形路径：圈线位于右侧边缘
@@ -335,6 +324,12 @@ public class RollingBallPanel extends View
         updateY = new float[9]; // up to 6 lines of stats will appear
         for (int i = 0; i < updateY.length; ++i)
             updateY[i] = height - offset - i * (statsTextSize + gap);
+
+
+        // Initialize midline for anti-cheat
+        midlineX = width / 2f;
+        midlineCrossCount = 0;
+        wasLeftOfMidline = (xBallCenter < midlineX); // 初始位置状态
     }
 
     /*
@@ -437,106 +432,23 @@ public class RollingBallPanel extends View
 
         isBallInsidePath = currentlyInsidePath;
 
-        // Check for midline crossing (anti-cheat)
-        if (lapInProgress && !midlineCrossed) {
-            if ((prevXBallCenter < midlineX && xBallCenter >= midlineX) ||
-                    (prevXBallCenter > midlineX && xBallCenter <= midlineX)) {
-                midlineCrossed = true;
+        // midline crossing check for anti-cheat
+        if (currentLap >= 0) {
+            boolean isLeftNow = xBallCenter < midlineX;
+            if (wasLeftOfMidline != isLeftNow) {
+                midlineCrossCount++;
+                Log.d(TAG, "Midline crossed! Count: " + midlineCrossCount);
             }
+            wasLeftOfMidline = isLeftNow;
         }
-
 
 
         // Check for lap line crossing in the correct direction
-        checkLapCompletion();
-
-        // 当球在圈线附近晃动时，忽略微小移动
-        if (Math.abs(xBallCenter - lapLineX) < ballDiameter/4) {
-            return;
-        }
+        checkLapCompletion(pitchArg);
 
         invalidate(); // force onDraw to redraw the screen with the ball in its new position
     }
-    /**
-     * Check if the ball has completed a lap by crossing the lap line in the correct direction
-     */
-    private void checkLapCompletion() {
-        // Check if ball is crossing the lap line
-        boolean crossingLapLine = isValidCrossing() && ballTouchingLapLine();
 
-        long currentTime = System.currentTimeMillis();
-//        if (currentTime - lastLapTime > 1000) { // 1秒冷却时间
-//            toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
-//            lastLapTime = currentTime;
-//        }
-//&& midlineCrossed
-        if (crossingLapLine && currentLap < targetLaps) {
-            currentLap++;
-            midlineCrossed = false; // 重置中线标志
-            toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
-            Log.d(TAG, "checkLapCompletion: Lap completed. currentLap=" + currentLap);
-        }else {
-            Log.d(TAG, "checkLapCompletion: Lap not completed. crossingLapLine=" + crossingLapLine + ", currentLap=" + currentLap);
-        }
-    }
-    /**
-     * Check if the ball is crossing the lap line via a valid direction
-     */
-    private boolean isValidCrossing() {
-        boolean validCrossing = false;
-
-        if (pathType == PATH_TYPE_SQUARE || pathType == PATH_TYPE_CIRCLE) {
-            // 方形路径：判断横向穿越
-            if (clockwiseDirection) {
-                // 顺时针：从上到下穿过右侧圈线
-                validCrossing = prevYBallCenter <= lapLineY && yBallCenter > lapLineY
-                        && Math.abs(yBallCenter - lapLineY) < ballDiameter / 2;
-            } else {
-                // 逆时针：从下到上穿过右侧圈线
-                validCrossing = prevYBallCenter >= lapLineY && yBallCenter < lapLineY
-                        && Math.abs(yBallCenter - lapLineY) < ballDiameter / 2;
-            }
-        }
-
-        Log.d(TAG, "isValidCrossing: validCrossing=" + validCrossing + ", prevYBallCenter=" + prevYBallCenter + ", yBallCenter=" + yBallCenter + ", lapLineY=" + lapLineY);
-        return validCrossing;
-
-    }
-
-    /**
-     * Check if the ball is touching the lap line
-     * @return
-     */
-    public boolean ballTouchingLapLine(){
-        ballNow.left = xBall;
-        ballNow.top = yBall;
-        ballNow.right = xBall + ballDiameter;
-        ballNow.bottom = yBall + ballDiameter;
-
-        boolean intersects = RectF.intersects(ballNow, lapLineRectangle);
-        Log.d(TAG, "TouchLapLine: intersects=" + intersects + ", ballNowRect=" + ballNow + ", lapLineRect=" + lapLineRectangle);
-
-        return intersects;
-    }
-
-    /**
-     * Check if the ball is inside the path
-     */
-    private boolean isInsidePath() {
-        if (pathType == PATH_TYPE_SQUARE) {
-            return xBallCenter >= outerRectangle.left && xBallCenter <= outerRectangle.right &&
-                    yBallCenter >= outerRectangle.top && yBallCenter <= outerRectangle.bottom &&
-                    !(xBallCenter >= innerRectangle.left && xBallCenter <= innerRectangle.right &&
-                            yBallCenter >= innerRectangle.top && yBallCenter <= innerRectangle.bottom);
-        } else if (pathType == PATH_TYPE_CIRCLE) {
-            float distanceFromCenter = (float)Math.sqrt(
-                    (xBallCenter - xCenter) * (xBallCenter - xCenter) +
-                            (yBallCenter - yCenter) * (yBallCenter - yCenter)
-            );
-            return distanceFromCenter <= radiusOuter && distanceFromCenter >= radiusInner;
-        }
-        return true; // Default if no path type is set
-    }
 
     protected void onDraw(Canvas canvas)
     {
@@ -575,21 +487,20 @@ public class RollingBallPanel extends View
 
         }
 
-        // Draw the midline (anti-cheat line)
-        canvas.drawLine(midlineX, outerRectangle.top, midlineX, outerRectangle.bottom, midlinePaint);
-
 
         // Draw the direction arrow
         // 绘制方向箭头（在屏幕中心）
-        canvas.save();
-        canvas.translate(width/2f, height/2f); // 移动到中心
+        if (directionDetermined) {
+            canvas.save();
+            canvas.translate(width / 2f, height / 2f); // 移动到中心
 
-        // 根据方向旋转画布
-        canvas.rotate(clockwiseDirection ? 0 : 180);
+            // 根据方向旋转画布
+            canvas.rotate(clockwiseDirection ? 0 : 180);
 
-        // 绘制箭头（自动适应方向）
-        canvas.drawPath(arrowPath, arrowPaint);
-        canvas.restore();
+            // 绘制箭头（自动适应方向）
+            canvas.drawPath(arrowPath, arrowPaint);
+            canvas.restore();
+        }
 
         // Draw the lap line
         canvas.drawLine(lapLineX, lapLineY, lapLineX1, lapLineY1, lapLinePaint);
@@ -659,6 +570,65 @@ public class RollingBallPanel extends View
 
     } // end onDraw
 
+
+    /*
+     * Configure the rolling ball panel according to setup parameters
+     */
+    public void configure(String pathMode, String pathWidthArg, int gainArg, String orderOfControlArg, int numbersOfLaps)
+    {
+        // square vs. circle
+        if (pathMode.equals("Square"))
+            pathType = PATH_TYPE_SQUARE;
+        else if (pathMode.equals("Circle"))
+            pathType = PATH_TYPE_CIRCLE;
+        else
+            pathType = MODE_NONE;
+
+        // narrow vs. medium vs. wide
+        if (pathWidthArg.equals("Narrow"))
+            pathWidth = PATH_WIDTH_NARROW;
+        else if (pathWidthArg.equals("Wide"))
+            pathWidth = PATH_WIDTH_WIDE;
+        else
+            pathWidth = PATH_WIDTH_MEDIUM;
+
+        gain = gainArg;
+        orderOfControl = orderOfControlArg;
+
+        // Set the numbers of Laps
+        targetLaps = numbersOfLaps;
+    }
+
+    // returns true if the ball is touching (i.e., overlapping) the line of the inner or outer path border
+    public boolean ballTouchingLine()
+    {
+        if (pathType == PATH_TYPE_SQUARE)
+        {
+            ballNow.left = xBall;
+            ballNow.top = yBall;
+            ballNow.right = xBall + ballDiameter;
+            ballNow.bottom = yBall + ballDiameter;
+
+            if (RectF.intersects(ballNow, outerRectangle) && !RectF.intersects(ballNow, outerShadowRectangle))
+                return true; // touching outside rectangular border
+
+            if (RectF.intersects(ballNow, innerRectangle) && !RectF.intersects(ballNow, innerShadowRectangle))
+                return true; // touching inside rectangular border
+
+        } else if (pathType == PATH_TYPE_CIRCLE)
+        {
+            final float ballDistance = (float)Math.sqrt((xBallCenter - xCenter) * (xBallCenter - xCenter)
+                    + (yBallCenter - yCenter) * (yBallCenter - yCenter));
+
+            if (Math.abs(ballDistance - radiusOuter) < (ballDiameter / 2f))
+                return true; // touching outer circular border
+
+            if (Math.abs(ballDistance - radiusInner) < (ballDiameter / 2f))
+                return true; // touching inner circular border
+        }
+        return false;
+    }
+
     /**
      * Draw an lap line
      * @param paint
@@ -706,66 +676,76 @@ public class RollingBallPanel extends View
         }
     }
 
-
-    /*
-     * Configure the rolling ball panel according to setup parameters
+    /**
+     * Check if the ball is touching the lap line
+     * @return
      */
-    public void configure(String pathMode, String pathWidthArg, int gainArg, String orderOfControlArg, int numbersOfLaps)
-    {
-        // square vs. circle
-        if (pathMode.equals("Square"))
-            pathType = PATH_TYPE_SQUARE;
-        else if (pathMode.equals("Circle"))
-            pathType = PATH_TYPE_CIRCLE;
-        else
-            pathType = MODE_NONE;
+    public boolean ballTouchingLapLine(){
+        ballNow.left = xBall;
+        ballNow.top = yBall;
+        ballNow.right = xBall + ballDiameter;
+        ballNow.bottom = yBall + ballDiameter;
 
-        // narrow vs. medium vs. wide
-        if (pathWidthArg.equals("Narrow"))
-            pathWidth = PATH_WIDTH_NARROW;
-        else if (pathWidthArg.equals("Wide"))
-            pathWidth = PATH_WIDTH_WIDE;
-        else
-            pathWidth = PATH_WIDTH_MEDIUM;
+        boolean intersects = RectF.intersects(ballNow, lapLineRectangle);
+        Log.d(TAG, "TouchLapLine: intersects=" + intersects + ", ballNowRect=" + ballNow + ", lapLineRect=" + lapLineRectangle);
 
-        gain = gainArg;
-        orderOfControl = orderOfControlArg;
-
-        // Generate a random arrow direction
-        clockwiseDirection = new Random().nextBoolean();
-        // Set the numbers of Laps
-        targetLaps = numbersOfLaps;
+        return intersects;
     }
 
-    // returns true if the ball is touching (i.e., overlapping) the line of the inner or outer path border
-    public boolean ballTouchingLine()
-    {
-        if (pathType == PATH_TYPE_SQUARE)
-        {
-            ballNow.left = xBall;
-            ballNow.top = yBall;
-            ballNow.right = xBall + ballDiameter;
-            ballNow.bottom = yBall + ballDiameter;
-
-            if (RectF.intersects(ballNow, outerRectangle) && !RectF.intersects(ballNow, outerShadowRectangle))
-                return true; // touching outside rectangular border
-
-            if (RectF.intersects(ballNow, innerRectangle) && !RectF.intersects(ballNow, innerShadowRectangle))
-                return true; // touching inside rectangular border
-
-        } else if (pathType == PATH_TYPE_CIRCLE)
-        {
-            final float ballDistance = (float)Math.sqrt((xBallCenter - xCenter) * (xBallCenter - xCenter)
-                    + (yBallCenter - yCenter) * (yBallCenter - yCenter));
-
-            if (Math.abs(ballDistance - radiusOuter) < (ballDiameter / 2f))
-                return true; // touching outer circular border
-
-            if (Math.abs(ballDistance - radiusInner) < (ballDiameter / 2f))
-                return true; // touching inner circular border
+    /**
+     * Check if the ball is inside the path
+     */
+    private boolean isInsidePath() {
+        if (pathType == PATH_TYPE_SQUARE) {
+            return xBallCenter >= outerRectangle.left && xBallCenter <= outerRectangle.right &&
+                    yBallCenter >= outerRectangle.top && yBallCenter <= outerRectangle.bottom &&
+                    !(xBallCenter >= innerRectangle.left && xBallCenter <= innerRectangle.right &&
+                            yBallCenter >= innerRectangle.top && yBallCenter <= innerRectangle.bottom);
+        } else if (pathType == PATH_TYPE_CIRCLE) {
+            float distanceFromCenter = (float)Math.sqrt(
+                    (xBallCenter - xCenter) * (xBallCenter - xCenter) +
+                            (yBallCenter - yCenter) * (yBallCenter - yCenter)
+            );
+            return distanceFromCenter <= radiusOuter && distanceFromCenter >= radiusInner;
         }
-        return false;
+        return true; // Default if no path type is set
     }
 
+    /**
+     * Check if the ball has completed a lap by crossing the lap line in the correct direction
+     */
+    private void checkLapCompletion(float pitchArg) {
+        // 判断是否有效跨线（基于传感器角度）
+        boolean validCrossing = false;
+        if (isFirstCross) {
+            // 首次跨线：根据传感器角度判断方向
+            validCrossing = ballTouchingLapLine();
+            if (validCrossing) {
+                // 通过tiltAngleArg判断方向：假设tiltAngleArg=0度指向右侧
+                clockwiseDirection = (pitchArg < 0); // 例如：向下倾斜为顺时针
+                directionDetermined = true;
+                isFirstCross = false;
+                currentLap = 0; // 第一圈开始
+                midlineCrossCount = 0; // 重置中线计数
+                toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
+                Log.d(TAG, "First valid lap. Direction: " + (clockwiseDirection ? "clockwise" : "counterclockwise")) ;
+            }
+        } else {
+            // 后续跨线：验证方向是否匹配
+            if (ballTouchingLapLine()) {
+                if (clockwiseDirection == (pitchArg < 0) && midlineCrossCount >= 2) {
+                    validCrossing = true;
+                }
+            }
 
+            if (validCrossing && currentLap < targetLaps) {
+                currentLap++;
+                toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
+                midlineCrossCount = 0;
+                Log.d(TAG, "Lap completed: " + currentLap);
+            }
+        }
+    }
 }
+
+
