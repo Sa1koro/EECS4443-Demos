@@ -1,6 +1,7 @@
 package ca.yorku.eecs.mack.demotiltball56809;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -9,18 +10,14 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.media.ToneGenerator;
 import android.os.Vibrator;
 import android.util.AttributeSet;
 import android.view.View;
 
 import java.util.Locale;
-//import Random for Lap Direction Indicators
-import java.util.Random;
-//import Timer for User Performance Data
-import java.util.Timer;
-import java.util.TimerTask;
+
+//import for User Performance Data
 import java.util.List;
 import java.util.ArrayList;
 import android.util.Log;
@@ -93,33 +90,27 @@ public class RollingBallPanel extends View
     private boolean clockwiseDirection; // 控制方向
     private  Paint arrowPaint;
     private  Path arrowPath;
-    private boolean arrowDirectionUp; // true if arrow points up, false if down
-    private float arrowXStart;
-    private float arrowYStart;
-    private float arrowXEnd;
-    private float arrowYEnd;
+
 
     private boolean isFirstCross = true; // Check if this is the first cross
     private boolean directionDetermined = false; // Check if teh direction has been determined
 
-    // Random number generator
-    private Random random;
 
     // add  variables Task4.4 User Performance Data
     int targetLaps; // target Laps（从Bundle获取）
     int currentLap; // Lap tracking
-    private long lapStartTime = 0; // Time when current lap started
-    private long experimentStartTime = 0; // Time when experiment started
-    private List<Long> lapTimes = new ArrayList<>(); // Store lap times
     private boolean isBallInsidePath = true; // Track if ball is inside the path
-    private long timeOutsidePathStart = 0; // Time when ball went outside path
-    private long totalTimeOutsidePath = 0; // Total time spent outside path
-    private boolean hasCrossedMidline = false; // Track if ball crossed midline (anti-cheat)
-    private boolean lapInProgress = false; // Track if a lap is in progress
-    private long totalInPathTime; // 总路径内时间
+    private long inPathTime; // 总路径内时间
+    private long lastInPathTimeUpdate = 0;
     private boolean wasInsidePath; // 用于墙壁碰撞检测
-    RectF detectOutRect, detectInRect, startOval, lapLineRectangle;
+    RectF lapLineRectangle;
     private static final String TAG = "RollingBallPanel";
+    private long experimentStartTime = 0; // Time when experiment started
+    private long lapStartTime = 0; // Time when current lap started
+    private List<Long> lapTimes = new ArrayList<>(); // Store lap times
+    private long totalTimeOutsidePath = 0; // Total time spent outside path
+    private long timeOutsidePathStart = 0; // Time when ball went outside path
+    private boolean experimentCompleted = false; // Flag to indicate completion
 
 
     // Midline for anti-cheat verification
@@ -129,21 +120,10 @@ public class RollingBallPanel extends View
     float prevXBallCenter, prevYBallCenter; // previous center of the ball position (for tracking direction)
 
 
-
-
     // add new variable for soundEffect
-    private MediaPlayer lapSound; // 圈数音效
     ToneGenerator toneGen;
 
 
-
-    // add variables for Color Style
-    final static int COLOR_TYPE_BLUE = 1;
-    final static int COLOR_TYPE_RED = 2;
-    final static int COLOR_TYPE_GREEN = 3;
-    final static int COLOR_TYPE_YELLOW = 4;
-    int pathColor;
-    String colorOfPath;
 
     public RollingBallPanel(Context contextArg)
     {
@@ -424,6 +404,19 @@ public class RollingBallPanel extends View
         }
         wasInsidePath = currentlyInsidePath;
 
+        // 计算路径内时间
+        long currentTime = System.currentTimeMillis();
+        if (currentlyInsidePath) {
+            if (lastInPathTimeUpdate != 0) {
+                // 累加时间差
+                inPathTime += currentTime - lastInPathTimeUpdate;
+            }
+            lastInPathTimeUpdate = currentTime;
+        } else {
+            // 不在路径内，停止计时
+            lastInPathTimeUpdate = 0;
+        }
+
         // Track time outside path
         if (isBallInsidePath && !currentlyInsidePath) {
             // Ball just went outside the path
@@ -518,36 +511,16 @@ public class RollingBallPanel extends View
         // draw label
         canvas.drawText("Demo_TiltBall_56809", 6f, labelTextSize, labelPaint);
         // Calculate performance metrics to display
-        String lapTimeStr = "Waiting for first lap...";
-        String totalTimeStr = "Waiting for experiment to begin...";
-
+        String timingText = "Waiting to start...";
         if (experimentStartTime > 0) {
             long currentTime = System.currentTimeMillis();
             long totalElapsedTime = currentTime - experimentStartTime;
             long currentLapTime = currentTime - lapStartTime;
 
-            // Format times as seconds with milliseconds
-            totalTimeStr = String.format(Locale.CANADA, "Total time: %.1f s", totalElapsedTime / 1000.0f);
-            lapTimeStr = String.format(Locale.CANADA, "Current lap: %.1f s", currentLapTime / 1000.0f);
-
-            // If we have any completed laps, calculate average
-            if (!lapTimes.isEmpty()) {
-                long sum = 0;
-                for (Long time : lapTimes) {
-                    sum += time;
-                }
-                float avgLapTime = sum / (float) lapTimes.size() / 1000.0f;
-                lapTimeStr += String.format(Locale.CANADA, " (Avg: %.1f s)", avgLapTime);
-            }
+            timingText = String.format(Locale.CANADA, "Total: %.1fs | Lap: %.1fs",
+                    totalElapsedTime / 1000f, currentLapTime / 1000f);
         }
-
-        // Format outside path time
-        long outsideTime = totalTimeOutsidePath;
-        if (timeOutsidePathStart > 0) {
-            // Add current outside time if still outside
-            outsideTime += System.currentTimeMillis() - timeOutsidePathStart;
-        }
-        String outsidePathStr = String.format(Locale.CANADA, "Time outside path: %.1f s", outsideTime / 1000.0f);
+        canvas.drawText(timingText, 6f, labelTextSize * 2 + 6, labelPaint);
 
 
         // draw stats (pitch, roll, tilt angle, tilt magnitude)
@@ -555,13 +528,7 @@ public class RollingBallPanel extends View
         {
             canvas.drawText("Wall hits = " + wallHits, 6f, updateY[7], statsPaint);
             canvas.drawText("Numbers of laps = " + currentLap + "/" + targetLaps, 6f, updateY[6], statsPaint);
-            long lapTime;
-            if (lapStartTime == 0) {
-                lapTime = lapStartTime;
-            } else{
-                lapTime = System.currentTimeMillis() - lapStartTime/1000;
-            }
-            canvas.drawText("Lap times: " + lapTime, 6f, updateY[5], statsPaint);
+            canvas.drawText("In path time: " + (inPathTime / 1000f) + "s", 6f, updateY[5], statsPaint);
             canvas.drawText("-----------------", 6f, updateY[4], statsPaint);
         }
         canvas.drawText(String.format(Locale.CANADA, "Tablet pitch (degrees) = %.2f", pitch), 6f, updateY[3],
@@ -667,20 +634,6 @@ public class RollingBallPanel extends View
 
     }
 
-    // Call this method when a new game starts
-    public void resetArrowDirection() {
-        // Randomly choose the arrow direction (up or down)
-        arrowDirectionUp = random.nextBoolean();
-
-        // Set the arrow's end point based on the chosen direction
-        if (arrowDirectionUp) {
-            arrowXEnd = arrowXStart;
-            arrowYEnd = arrowYStart - 100; // Pointing up
-        } else {
-            arrowXEnd = arrowXStart;
-            arrowYEnd = arrowYStart + 100; // Pointing down
-        }
-    }
 
     /**
      * Check if the ball is touching the lap line
@@ -721,36 +674,84 @@ public class RollingBallPanel extends View
      * Check if the ball has completed a lap by crossing the lap line in the correct direction
      */
     private void checkLapCompletion(float pitchArg) {
-        // 判断是否有效跨线（基于传感器角度）
+        // Judgment of effective crossing (based on sensor angle)
         boolean validCrossing = false;
         if (isFirstCross) {
-            // 首次跨线：根据传感器角度判断方向
+            // First crossing: determine direction based on sensor angle
             validCrossing = ballTouchingLapLine();
             if (validCrossing) {
-                // 通过tiltAngleArg判断方向：假设tiltAngleArg=0度指向右侧
-                clockwiseDirection = (pitchArg < 0); // 例如：向下倾斜为顺时针
+                // Determine direction using tiltAngleArg
+                clockwiseDirection = (pitchArg < 0);
                 directionDetermined = true;
                 isFirstCross = false;
-                currentLap = 0; // 第一圈开始
-                midlineCrossCount = 0; // 重置中线计数
+                currentLap = 0; // First lap starts
+                midlineCrossCount = 0; // Reset midline count
                 toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
-                Log.d(TAG, "First valid lap. Direction: " + (clockwiseDirection ? "clockwise" : "counterclockwise")) ;
+
+                // Start timing for experiment and first lap
+                experimentStartTime = System.currentTimeMillis();
+                lapStartTime = experimentStartTime;
+                inPathTime = 0;
+
+                Log.d(TAG, "First valid lap. Direction: " + (clockwiseDirection ? "clockwise" : "counterclockwise"));
             }
         } else {
-            // 后续跨线：验证方向是否匹配
+            // Subsequent crossings: verify direction matches
             if (ballTouchingLapLine()) {
                 if (clockwiseDirection == (pitchArg < 0) && midlineCrossCount >= 2) {
                     validCrossing = true;
                 }
             }
 
-            if (validCrossing && currentLap < targetLaps) {
+            if (validCrossing) {
+                // Record lap time
+                long currentTime = System.currentTimeMillis();
+                long lapTime = currentTime - lapStartTime;
+                lapTimes.add(lapTime);
+
+                // Reset for next lap
+                lapStartTime = currentTime;
                 currentLap++;
                 toneGen.startTone(ToneGenerator.TONE_CDMA_PIP, 200);
                 midlineCrossCount = 0;
+                inPathTime = 0;
                 Log.d(TAG, "Lap completed: " + currentLap);
+
+                // Check if target laps completed
+                if (currentLap >= targetLaps) {
+                    experimentCompleted = true;
+                    showResults();
+                }
             }
         }
+    }
+
+    // Add a method to display results
+    private void showResults() {
+        // Calculate metrics
+        long totalTime = System.currentTimeMillis() - experimentStartTime;
+
+        // Calculate time spent in path
+        long timeInPath = totalTime - totalTimeOutsidePath;
+        float inPathPercentage = (float)timeInPath / totalTime * 100;
+
+        // Calculate average lap time
+        long totalLapTime = 0;
+        for (Long lapTime : lapTimes) {
+            totalLapTime += lapTime;
+        }
+        float avgLapTime = totalLapTime / (float)lapTimes.size();
+
+        // Create intent to start ResultActivity
+        Context context = getContext();
+        Intent intent = new Intent(context, ResultActivity.class);
+        intent.putExtra("totalLaps", currentLap);
+        intent.putExtra("avgLapTime", avgLapTime);
+        intent.putExtra("wallHits", wallHits);
+        intent.putExtra("inPathPercentage", inPathPercentage);
+
+        // Start the activity
+        context.startActivity(intent);
     }
 }
 

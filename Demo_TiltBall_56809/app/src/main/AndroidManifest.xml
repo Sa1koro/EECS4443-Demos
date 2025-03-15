@@ -24,6 +24,11 @@
             android:name="ca.yorku.eecs.mack.demotiltball56809.DemoTiltBall56809Activity"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
         </activity>
+        <!--add Result Activity-->
+        <activity
+            android:name=".ResultActivity"
+            android:label="Results"
+            android:screenOrientation="portrait" />
     </application>
 
 </manifest>
